@@ -352,7 +352,7 @@ public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
 ## 📧 Asynchronous Email Notification Engine
 
-The notification pipeline is built on Spring's `@Async` infrastructure in [`EmailService.java`](file:///c:/Users/niraj/Downloads/ticket%20management%20system/src/main/java/com/nettech/helpdesk/service/EmailService.java):
+The notification pipeline is built on Spring's `@Async` non-blocking infrastructure in [`EmailService.java`](file:///c:/Users/niraj/Downloads/ticket%20management%20system/src/main/java/com/nettech/helpdesk/service/EmailService.java):
 
 ```java
 @Service
@@ -360,6 +360,9 @@ public class EmailService {
 
     private static final Logger logger = LoggerFactory.getLogger(EmailService.class);
     private final JavaMailSender mailSender;
+
+    @Value("${spring.mail.username:noreply@nettech.com}")
+    private String fromEmail;
 
     @Autowired(required = false)
     public EmailService(JavaMailSender mailSender) {
@@ -373,20 +376,45 @@ public class EmailService {
         try {
             if (mailSender != null) {
                 SimpleMailMessage message = new SimpleMailMessage();
+                message.setFrom(fromEmail);
                 message.setTo(userEmail);
                 message.setSubject("[Nettech Help Desk] Ticket Status Updated: " + ticketTitle);
                 message.setText("Hello,\n\nYour support ticket '" + ticketTitle + 
-                                "' has been updated to status: " + newStatus + 
-                                ".\n\nLog in to the portal to view complete details.");
+                                "' status has been updated to: " + newStatus + 
+                                ".\n\nLog in to the Nettech Help Desk portal to view details.\n\nBest regards,\nNettech IT Support Team");
                 mailSender.send(message);
-                logger.info("Email successfully dispatched to {}", userEmail);
+                logger.info("Email notification successfully sent to {}", userEmail);
             }
         } catch (Exception e) {
-            logger.warn("SMTP email sending skipped/failed: {}. Application logic continued normally.", e.getMessage());
+            logger.warn("SMTP email sending to {} skipped/failed: {}. Application logic continued normally.", userEmail, e.getMessage());
         }
     }
 }
 ```
+
+### ⚙️ SMTP Mail Configuration (`application.properties`)
+
+The application supports live SMTP transmission via Gmail or any standard SMTP mail provider:
+
+```properties
+# =======================================================
+# 📧 SPRING MAIL CONFIGURATION (Gmail SMTP)
+# =======================================================
+spring.mail.host=smtp.gmail.com
+spring.mail.port=587
+spring.mail.username=your-email@gmail.com
+spring.mail.password=your-16-char-app-password
+spring.mail.properties.mail.smtp.auth=true
+spring.mail.properties.mail.smtp.starttls.enable=true
+spring.mail.properties.mail.smtp.starttls.required=true
+spring.mail.properties.mail.smtp.ssl.trust=smtp.gmail.com
+```
+
+> [!TIP]
+> **Generating a Gmail App Password:**
+> 1. Go to your **Google Account Security** &rarr; turn on **2-Step Verification**.
+> 2. Search for **App passwords** &rarr; create a password named `HelpDesk`.
+> 3. Copy the generated 16-character token into `spring.mail.password` in [`application.properties`](file:///c:/Users/niraj/Downloads/ticket%20management%20system/src/main/resources/application.properties).
 
 ---
 
